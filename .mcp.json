@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "weibo-idol": {
+      "command": "python3",
+      "args": ["server.py"],
+      "cwd": "./mcp-server"
+    }
+  }
+}

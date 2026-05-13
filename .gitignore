@@ -1,0 +1,25 @@
+# Data files
+mcp-server/data/*.db
+mcp-server/data/
+
+# Config with secrets
+mcp-server/config.json
+
+# MediaCrawler (external dependency, clone separately)
+MediaCrawler/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp

@@ -1,0 +1,15 @@
+[project]
+name = "weibo-idol-mcp"
+version = "0.1.0"
+description = "MCP Server for Weibo idol monitoring - powered by MediaCrawler"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp[cli]>=1.0.0",
+    "httpx>=0.28.0",
+    "aiosqlite>=0.21.0",
+    "pydantic>=2.5.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
