@@ -1,7 +1,10 @@
 """
 轻量级微博 API 客户端
 
-直接调用 m.weibo.cn 的移动端 API，不依赖 Playwright。
+支持两套 API：
+- 移动端 m.weibo.cn（默认）
+- 桌面端 weibo.com/ajax/（fallback，部分账号移动端被限制时自动切换）
+
 使用 MediaCrawler 登录后保存的 cookie 进行认证。
 """
 
@@ -15,10 +18,11 @@ import httpx
 
 
 class WeiboAPIClient:
-    """Weibo mobile API client using saved cookies."""
+    """Weibo API client with mobile + desktop fallback."""
 
     def __init__(self, cookies: str = "", proxy: Optional[str] = None):
         self._host = "https://m.weibo.cn"
+        self._desktop_host = "https://weibo.com"
         self._cookies = cookies
         self._proxy = proxy
         self._headers = {
@@ -32,19 +36,33 @@ class WeiboAPIClient:
             "X-Requested-With": "XMLHttpRequest",
             "Referer": "https://m.weibo.cn/",
         }
+        self._desktop_headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/125.0.0.0 Safari/537.36"
+            ),
+            "Accept": "application/json, text/plain, */*",
+            "Accept-Language": "zh-CN,zh;q=0.9",
+            "X-Requested-With": "XMLHttpRequest",
+            "Referer": "https://weibo.com/",
+        }
         if cookies:
             self._headers["Cookie"] = cookies
+            self._desktop_headers["Cookie"] = cookies
 
     def update_cookies(self, cookies: str):
         """Update the cookie string."""
         self._cookies = cookies
         self._headers["Cookie"] = cookies
+        self._desktop_headers["Cookie"] = cookies
 
     async def _request(self, method: str, url: str, **kwargs) -> Dict:
         """Make an HTTP request and return parsed JSON data."""
+        headers = kwargs.pop("headers", self._headers)
         async with httpx.AsyncClient(proxy=self._proxy, verify=True) as http_client:
             response = await http_client.request(
-                method, url, headers=self._headers, timeout=30, **kwargs
+                method, url, headers=headers, timeout=30, **kwargs
             )
 
         if response.status_code != 200:
@@ -56,6 +74,23 @@ class WeiboAPIClient:
             return data.get("data", {})
         else:
             raise Exception(f"API error: {data.get('msg', 'unknown error')}")
+
+    async def _desktop_request(self, method: str, url: str, **kwargs) -> Dict:
+        """Make request to desktop API (weibo.com/ajax/)."""
+        async with httpx.AsyncClient(proxy=self._proxy, verify=True) as http_client:
+            response = await http_client.request(
+                method, url, headers=self._desktop_headers, timeout=30, **kwargs
+            )
+
+        if response.status_code != 200:
+            raise Exception(f"HTTP {response.status_code}: {response.text[:200]}")
+
+        data = response.json()
+        ok_code = data.get("ok")
+        if ok_code == 1:
+            return data.get("data", data)
+        else:
+            raise Exception(f"Desktop API error: {data.get('msg', 'unknown error')}")
 
     async def _get(self, uri: str, params: Optional[Dict] = None) -> Dict:
         """GET request to m.weibo.cn API."""
@@ -82,16 +117,40 @@ class WeiboAPIClient:
         return await self._get(uri, params)
 
     async def get_creator_info(self, creator_id: str) -> Dict:
-        """Get creator profile information."""
-        uri = "/api/container/getIndex"
-        containerid = f"100505{creator_id}"
-        params = {
-            "jumpfrom": "weibocom",
-            "type": "uid",
-            "value": creator_id,
-            "containerid": containerid,
+        """Get creator profile information. Falls back to desktop API if mobile fails."""
+        try:
+            uri = "/api/container/getIndex"
+            containerid = f"100505{creator_id}"
+            params = {
+                "jumpfrom": "weibocom",
+                "type": "uid",
+                "value": creator_id,
+                "containerid": containerid,
+            }
+            return await self._get(uri, params)
+        except Exception:
+            # Fallback to desktop API
+            return await self._get_creator_info_desktop(creator_id)
+
+    async def _get_creator_info_desktop(self, creator_id: str) -> Dict:
+        """Get creator info via desktop API (weibo.com/ajax/)."""
+        url = f"{self._desktop_host}/ajax/profile/info?uid={creator_id}"
+        data = await self._desktop_request("GET", url)
+        user = data.get("user", data)
+        # Normalize to match mobile API format
+        return {
+            "userInfo": {
+                "id": user.get("id"),
+                "screen_name": user.get("screen_name"),
+                "followers_count": user.get("followers_count"),
+                "follow_count": user.get("friends_count"),
+                "statuses_count": user.get("statuses_count"),
+                "description": user.get("description", ""),
+                "profile_image_url": user.get("profile_image_url", ""),
+                "verified": user.get("verified", False),
+                "verified_reason": user.get("verified_reason", ""),
+            }
         }
-        return await self._get(uri, params)
 
     async def get_creator_container_id(self, creator_id: str) -> str:
         """Get the container ID for fetching creator's posts (107603 prefix)."""
@@ -112,27 +171,25 @@ class WeiboAPIClient:
         }
         return await self._get(uri, params)
 
-    async def get_post_detail(self, post_id: str) -> Dict:
-        """Get post detail by post ID."""
-        url = f"{self._host}/detail/{post_id}"
-        async with httpx.AsyncClient(proxy=self._proxy, verify=True) as http_client:
-            response = await http_client.get(url, headers=self._headers, timeout=30)
-
-        if response.status_code != 200:
-            raise Exception(f"HTTP {response.status_code}")
-
-        match = re.search(
-            r'var \$render_data = (\[.*?\])\[0\]', response.text, re.DOTALL
-        )
-        if match:
-            render_data = json.loads(match.group(1))
-            return render_data[0].get("status", {})
-        return {}
-
     async def get_post_comments(
         self, post_id: str, max_id: int = 0, max_id_type: int = 0
     ) -> Dict:
-        """Get comments for a post."""
+        """Get comments for a post. Falls back to desktop API if mobile fails."""
+        try:
+            return await self._get_post_comments_mobile(post_id, max_id, max_id_type)
+        except Exception as e:
+            if "还没有人评论" in str(e):
+                return {"data": [], "max_id": 0}
+            # Fallback to desktop API
+            try:
+                return await self._get_post_comments_desktop(post_id, max_id)
+            except Exception:
+                raise e
+
+    async def _get_post_comments_mobile(
+        self, post_id: str, max_id: int = 0, max_id_type: int = 0
+    ) -> Dict:
+        """Get comments via mobile API."""
         uri = "/comments/hotflow"
         params = {
             "id": post_id,
@@ -156,6 +213,44 @@ class WeiboAPIClient:
             if "还没有人评论" in msg:
                 return {"data": [], "max_id": 0}
             raise Exception(f"API error: {msg}")
+
+    async def _get_post_comments_desktop(
+        self, post_id: str, max_id: int = 0
+    ) -> Dict:
+        """Get comments via desktop API (weibo.com/ajax/statuses/buildComments)."""
+        params = {
+            "id": post_id,
+            "is_show_bulletin": 2,
+            "is_mix": 0,
+            "count": 20,
+            "flow": 0,
+        }
+        if max_id > 0:
+            params["max_id"] = max_id
+
+        url = f"{self._desktop_host}/ajax/statuses/buildComments?{urlencode(params)}"
+        async with httpx.AsyncClient(proxy=self._proxy, verify=True) as http_client:
+            response = await http_client.request(
+                "GET", url, headers=self._desktop_headers, timeout=30
+            )
+
+        if response.status_code != 200:
+            raise Exception(f"HTTP {response.status_code}")
+
+        data = response.json()
+        if data.get("ok") != 1:
+            raise Exception(f"Desktop API error: {data.get('msg', '')}")
+
+        raw_data = data.get("data", {})
+        # Desktop API returns {"data": [...], "max_id": N} or just a list
+        if isinstance(raw_data, list):
+            comments = raw_data
+            max_id_new = 0
+        else:
+            comments = raw_data.get("data", raw_data) if isinstance(raw_data, dict) else []
+            max_id_new = raw_data.get("max_id", 0) if isinstance(raw_data, dict) else 0
+
+        return {"data": comments, "max_id": max_id_new, "max_id_type": 0}
 
     async def check_login(self) -> bool:
         """Check if the current cookies are valid."""
@@ -192,8 +287,25 @@ class WeiboAPIClient:
     ) -> List[Dict]:
         """
         Get ALL posts by a creator (paginated until exhausted or max_count reached).
-        Returns raw card list.
+        Falls back to desktop API if mobile fails.
         """
+        try:
+            result = await self._get_all_creator_posts_mobile(
+                creator_id, max_count, crawl_interval
+            )
+            if result:
+                return result
+        except Exception:
+            pass
+        # Fallback to desktop API
+        return await self._get_all_creator_posts_desktop(
+            creator_id, max_count, crawl_interval
+        )
+
+    async def _get_all_creator_posts_mobile(
+        self, creator_id: str, max_count: int = 200, crawl_interval: float = 2.0
+    ) -> List[Dict]:
+        """Get all posts via mobile API (m.weibo.cn)."""
         container_id = f"107603{creator_id}"
         result = []
         since_id = ""
@@ -208,11 +320,9 @@ class WeiboAPIClient:
             if not cards:
                 break
 
-            # Filter to only post cards (card_type == 9)
             posts = [c for c in cards if c.get("card_type") == 9]
             result.extend(posts)
 
-            # Get next page token
             since_id = data.get("cardlistInfo", {}).get("since_id", "0")
             if not since_id or since_id == "0":
                 break
@@ -222,6 +332,45 @@ class WeiboAPIClient:
             if total <= crawler_total_count:
                 break
 
+            await asyncio.sleep(crawl_interval)
+
+        return result[:max_count]
+
+    async def _get_all_creator_posts_desktop(
+        self, creator_id: str, max_count: int = 200, crawl_interval: float = 2.0
+    ) -> List[Dict]:
+        """Get all posts via desktop API (weibo.com/ajax/statuses/mymblog)."""
+        result = []
+        page = 1
+
+        while len(result) < max_count:
+            url = (
+                f"{self._desktop_host}/ajax/statuses/mymblog"
+                f"?uid={creator_id}&page={page}&feature=0"
+            )
+            try:
+                data = await self._desktop_request("GET", url)
+            except Exception:
+                break
+
+            posts = data.get("list", [])
+            if not posts:
+                break
+
+            # Normalize desktop posts to match mobile card format
+            for post in posts:
+                card = {
+                    "card_type": 9,
+                    "mblog": post,
+                    "_source": "desktop",
+                }
+                result.append(card)
+
+            # Check if there are more pages
+            if not data.get("since_id") and len(posts) < 20:
+                break
+
+            page += 1
             await asyncio.sleep(crawl_interval)
 
         return result[:max_count]
