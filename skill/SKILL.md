@@ -182,6 +182,13 @@ def parse_weibo_date(date_str):
 - 热门评论：{如有值得关注的}
 ```
 
+## 自检规则（归档任务完成前 MUST 执行）
+
+1. 对比 posts 表中有 pics 字段的帖子数 vs images/ 目录下已有的帖子目录数，如果不一致，在报告中列出缺失的 post_id
+2. 检查是否有 created_at 不是 ISO 格式（`YYYY-MM-DD HH:MM:SS`）的记录，如有则修复
+3. 检查 comments 表中是否有 author_id 为空的记录，如有则报告
+4. 如果因速率限制中断，明确报告：已完成到哪条 post_id，下次从哪继续
+
 ## 注意事项
 
 1. **Cookie 过期** — 如果 `check_login()` 返回 False，立即停止并提醒用户更新 Cookie
