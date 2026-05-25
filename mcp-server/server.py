@@ -8,8 +8,12 @@ Weibo Idol MCP Server - 偶像领域微博监控工具
 import asyncio
 import json
 import logging
+import os
 import sys
 from pathlib import Path
+
+# Ensure imports work regardless of cwd
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
