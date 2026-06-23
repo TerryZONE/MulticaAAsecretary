@@ -3,7 +3,7 @@
     "weibo-idol": {
       "command": "python3",
       "args": ["server.py"],
-      "cwd": "./mcp-server"
+      "cwd": "/Users/qingtingcheng/Documents/Claude/MulticaAAsecretary/mcp-server"
     }
   }
 }
