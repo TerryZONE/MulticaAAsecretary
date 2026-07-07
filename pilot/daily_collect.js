@@ -65,19 +65,24 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   for (const acc of network) {
     const st = state[acc.uid] || {};
     const firstRun = !st.last_post_id;
-    respBucket = [];
     try {
-      await page.goto(`https://m.weibo.cn/u/${acc.uid}`, { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {});
-      await sleep(6000); // 固定等待页面自身完成 profile+feed 请求（dump 验证可靠）
-      // 事后解析：从收集到的响应里挑首个 feed 与 profile
-      let feed = null, profile = null;
-      for (const r of respBucket) {
-        const u = r.url();
-        const j = await r.json().catch((e) => ({ __e: String(e).slice(0, 50) }));
-        process.stderr.write(`DBG ${acc.uid} ${u.match(/containerid=(\d{6})/) ? u.match(/containerid=(\d{6})/)[1] : '?'} => ${j.__e || ('ok=' + j.ok)}\n`);
-        if (j.__e) continue;
-        if (!feed && u.includes('containerid=107603')) feed = j;
-        else if (!profile && u.includes('containerid=100505')) profile = j;
+      // 微博对 headed 访客的 feed 接口有概率性冷启动失败（页面 JS 偶尔不发 XHR）。
+      // 每账号最多 3 次 goto，直到截获到 ok=1 的 feed。
+      let feed = null, profile = null, attempt = 0;
+      while (!feed && attempt < 3) {
+        attempt++;
+        respBucket = [];
+        await page.goto(`https://m.weibo.cn/u/${acc.uid}`, { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {});
+        for (let w = 0; w < 16 && respBucket.length < 2; w++) await sleep(500);
+        await sleep(1000);
+        for (const r of respBucket) {
+          const u = r.url();
+          const j = await r.json().catch(() => null);
+          if (!j) continue;
+          if (!feed && u.includes('containerid=107603')) feed = j.ok === 1 ? j : feed;
+          else if (!profile && u.includes('containerid=100505')) profile = j;
+        }
+        if (!feed && attempt < 3) await sleep(3000);
       }
 
       // 快照（全员每日，来自页面自身的 profile 响应）

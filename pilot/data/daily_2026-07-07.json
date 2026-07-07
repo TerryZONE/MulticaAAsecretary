@@ -1,169 +1,22 @@
 {
  "date": "2026-07-07",
- "accounts": [
+ "accounts": [],
+ "errors": [
   {
    "uid": "7716940453",
    "name": "地下偶像相关揭示板",
-   "type": "资讯",
-   "city": "全国",
-   "priority": 0,
-   "renamed": null,
-   "new_posts": [
-    {
-     "id": "5318065009199025",
-     "is_top": false,
-     "date": "Tue Jul 07 15:22:46 +0800 2026",
-     "text": "#live演出情报#",
-     "rt": {
-      "user": "神的爱恋诗_official",
-      "text": "💕「爱恋梦境」The Love Dream Vol.04&amp;05 情报公开✨「切比特的爱♡正中箭心 切切Chieko生日sp❤️」日期：2026年7月11日（周六）⏰OPEN 13:40 START 14:00会场：ModernSkyLAB重庆（重庆渝北区仙桃街道秋城大道99号大悦城购物中心B5-501）🎫无料入场------------------------------ ...全文"
-     },
-     "reposts": 0,
-     "comments": 0,
-     "likes": 5,
-     "pics": 0,
-     "screen_name": "地下偶像相关揭示板",
-     "baseline": true
-    },
-    {
-     "id": "5318064951527945",
-     "is_top": false,
-     "date": "Tue Jul 07 15:22:32 +0800 2026",
-     "text": "",
-     "rt": {
-      "user": "神的爱恋诗_official",
-      "text": "神的爱恋诗 Happy Birthday！今天是@切切chieko_711生诞备战中 的生日❤️“祝你心意澄明 不失爱与果敢 朝朝如愿 岁岁平安”生日快乐🎂"
-     },
-     "reposts": 0,
-     "comments": 0,
-     "likes": 6,
-     "pics": 0,
-     "screen_name": "地下偶像相关揭示板",
-     "baseline": true
-    },
-    {
-     "id": "5318064929246724",
-     "is_top": false,
-     "date": "Tue Jul 07 15:22:27 +0800 2026",
-     "text": "#live演出情报#",
-     "rt": {
-      "user": "萌趣厂",
-      "text": "【活动情报】IDOLDAY 百联南方偶像日20260710@萌趣厂 x @百联南方购物中心 联合主办！日期🗓：2026.07.10时间⏰：19:00地点📍：上海市闵行区沪闵路7388号百联南方购物中心二区3楼中庭📢转+🍎+关 抽出价值9️⃣8️⃣元特典会入场券*1🎫观演无料💰全场后特，特典会指名入场券98 ...全文"
-     },
-     "reposts": 1,
-     "comments": 0,
-     "likes": 5,
-     "pics": 0,
-     "screen_name": "地下偶像相关揭示板",
-     "baseline": true
-    }
-   ],
-   "first_run": true
+   "error": "feed_missing ok=none"
   },
   {
    "uid": "7929840325",
    "name": "STARRY_ENTERTAINMENT",
-   "type": "厂牌",
-   "city": "成都",
-   "priority": 1,
-   "renamed": null,
-   "new_posts": [
-    {
-     "id": "5317796783456521",
-     "is_top": false,
-     "date": "Mon Jul 06 21:36:55 +0800 2026",
-     "text": "持续招募中ing。",
-     "rt": {
-      "user": "STARRY_ENTERTAINMENT",
-      "text": "‼️STARRY2026夏季招募開始‼️属于你的主角故事，属于你的闪耀舞台，从现在开始。转➕关 抽1888💰（8.1设置8.31开） STARRY_ENTERTAINMENT的微博视频"
-     },
-     "reposts": 1,
-     "comments": 0,
-     "likes": 10,
-     "pics": 0,
-     "screen_name": "STARRY_ENTERTAINMENT",
-     "baseline": true
-    },
-    {
-     "id": "5315619717386578",
-     "is_top": false,
-     "date": "Tue Jun 30 21:26:03 +0800 2026",
-     "text": "【情报解禁】Starry Fes July in GZ🎒演出团体STARDIARY/STARHONEY/STARFAIRY/空色轨迹/弥漫星雲/银烁花火/SIRIUS/午前4時/Meltic/SeaFoam/ReaLume/Rever/DigitalDuel/Lumina/HIMAWARI/恋音契约🎒票务情报网页链接：秀动🔍STARRY（7.2 20：00）※普通票：75女性区🈶🎒活动地点广 ...全文",
-     "rt": null,
-     "reposts": 475,
-     "comments": 57,
-     "likes": 134,
-     "pics": 2,
-     "screen_name": "STARRY_ENTERTAINMENT",
-     "baseline": true
-    },
-    {
-     "id": "5315566294272709",
-     "is_top": false,
-     "date": "Tue Jun 30 17:53:46 +0800 2026",
-     "text": "【情报解禁】Mini Starry Fes in GZ🎒演出团体STARDIARY/STARHONEY/STARFAIRY/空色轨迹/弥漫星雲/银烁花火/SIRIUS🎒票务情报网页链接：秀动🔍STARRY（7.1 20：00）※普通票：75女性区🈶🎒活动地点广州市荔湾区恩宁路265号L3 Maolivehouse（永庆坊）转➕关抽75*2 ...全文",
-     "rt": null,
-     "reposts": 497,
-     "comments": 43,
-     "likes": 138,
-     "pics": 1,
-     "screen_name": "STARRY_ENTERTAINMENT",
-     "baseline": true
-    }
-   ],
-   "first_run": true
+   "error": "feed_missing ok=none"
   },
   {
    "uid": "7854851138",
    "name": "YUMETORI-小野",
-   "type": "成员",
-   "city": "上海",
-   "priority": 3,
-   "renamed": null,
-   "new_posts": [
-    {
-     "id": "5317777905684170",
-     "is_top": false,
-     "date": "Mon Jul 06 20:21:55 +0800 2026",
-     "text": "越是思念你，就越是感到苦闷，却还是觉得有些许幸福…₍ᵔ･•･ᵔ₎… YUMETORI-小野的微博视频",
-     "rt": null,
-     "reposts": 1,
-     "comments": 47,
-     "likes": 119,
-     "pics": 0,
-     "screen_name": "YUMETORI-小野",
-     "baseline": true
-    },
-    {
-     "id": "5317490544739864",
-     "is_top": false,
-     "date": "Mon Jul 06 01:20:03 +0800 2026",
-     "text": "我和小绫ringo在2026年7月5日达成成就:出发→观看电波Oneman→世界树拼盘→世界树特典→观看Sairen生日SP→回家然后我就这样看着她哭了一整天，听说她在台上还哭了☝🏻🤓。好感性女子一枚。从一大早担心递纸到最后已经到看她哭就狂笑了的程度。然后差点带着手环上台了，还好小容提醒我了。",
-     "rt": null,
-     "reposts": 1,
-     "comments": 61,
-     "likes": 154,
-     "pics": 3,
-     "screen_name": "YUMETORI-小野",
-     "baseline": true
-    },
-    {
-     "id": "5317464956347441",
-     "is_top": false,
-     "date": "Sun Jul 05 23:38:22 +0800 2026",
-     "text": "因为是有你们陪伴着的一年四季，希望一直有你们陪伴着的一年四季。",
-     "rt": null,
-     "reposts": 1,
-     "comments": 27,
-     "likes": 111,
-     "pics": 1,
-     "screen_name": "YUMETORI-小野",
-     "baseline": true
-    }
-   ],
-   "first_run": true
+   "error": "feed_missing ok=none"
   }
  ],
- "errors": [],
- "snapshots": 3
+ "snapshots": 0
 }
