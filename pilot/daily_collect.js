@@ -97,7 +97,14 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       const feedOk = feed && feed.ok === 1;
       if (!feedOk) {
         out.errors.push({ uid: acc.uid, name: acc.name, error: 'feed_missing ok=' + (feed ? feed.ok : 'none') });
+        consecFail++;
+        if (consecFail >= 6) {
+          out.aborted = `连续 ${consecFail} 个账号 feed 失败，疑似风控，提前中止（进度 ${done + 1}/${network.length}）`;
+          process.stderr.write('ABORT: ' + out.aborted + '\n');
+          break;
+        }
       } else {
+        consecFail = 0;
         const cards = (feed.data.cards || []).filter(c => c.card_type === 9 && c.mblog);
         const posts = cards.map(c => {
           const m = c.mblog;
