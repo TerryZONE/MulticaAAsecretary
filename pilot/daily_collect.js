@@ -69,13 +69,13 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     try {
       await page.goto(`https://m.weibo.cn/u/${acc.uid}`, { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {});
       await sleep(6000); // 固定等待页面自身完成 profile+feed 请求（dump 验证可靠）
-      process.stderr.write(`DBG ${acc.uid} url=${page.url().slice(20,45)} bucket=${respBucket.length}\n`);
       // 事后解析：从收集到的响应里挑首个 feed 与 profile
       let feed = null, profile = null;
       for (const r of respBucket) {
         const u = r.url();
-        const j = await r.json().catch(() => null);
-        if (!j) continue;
+        const j = await r.json().catch((e) => ({ __e: String(e).slice(0, 50) }));
+        process.stderr.write(`DBG ${acc.uid} ${u.match(/containerid=(\d{6})/) ? u.match(/containerid=(\d{6})/)[1] : '?'} => ${j.__e || ('ok=' + j.ok)}\n`);
+        if (j.__e) continue;
         if (!feed && u.includes('containerid=107603')) feed = j;
         else if (!profile && u.includes('containerid=100505')) profile = j;
       }
