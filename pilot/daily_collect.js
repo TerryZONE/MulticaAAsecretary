@@ -61,6 +61,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const out = { date: today, accounts: [], errors: [], snapshots: 0 };
   const snapLines = [];
   let done = 0;
+  let consecFail = 0; // 熔断：连续 6 个账号拿不到 feed 视为被风控，提前中止
 
   for (const acc of network) {
     const st = state[acc.uid] || {};
