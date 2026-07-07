@@ -68,15 +68,17 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   for (const acc of network) {
     const st = state[acc.uid] || {};
     const firstRun = !st.last_post_id;
-    bucket = { profile: null, feed: null };
+    bucket = { profileResp: null, feedResp: null };
     try {
-      await page.goto(`https://m.weibo.cn/u/${acc.uid}`, { waitUntil: 'networkidle', timeout: 30000 }).catch(() => {});
-      // 兜底：networkidle 已基本保证 feed 到位，再轮询等待最多 8 秒
-      for (let w = 0; w < 16 && !bucket.feed; w++) await sleep(500);
-      await sleep(500);
+      await page.goto(`https://m.weibo.cn/u/${acc.uid}`, { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {});
+      // 等页面自身发出 feed 请求（最多 10 秒）
+      for (let w = 0; w < 20 && !bucket.feedResp; w++) await sleep(500);
+      await sleep(600);
+      const feed = bucket.feedResp ? await bucket.feedResp.json().catch(() => null) : null;
+      const profile = bucket.profileResp ? await bucket.profileResp.json().catch(() => null) : null;
 
       // 快照（全员每日，来自页面自身的 profile 响应）
-      const ui = bucket.profile && bucket.profile.data && bucket.profile.data.userInfo;
+      const ui = profile && profile.data && profile.data.userInfo;
       if (ui) {
         const est = String(ui.followers_count).includes('万') ? Math.round(parseFloat(ui.followers_count) * 10000) : parseInt(ui.followers_count) || '';
         snapLines.push(`${today},${acc.uid},${ui.screen_name},${ui.followers_count},${est},,${ui.statuses_count || ''}`);
