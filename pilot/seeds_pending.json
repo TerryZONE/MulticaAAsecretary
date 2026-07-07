@@ -40,5 +40,26 @@
   "status": "no_exact_match",
   "type": "团体",
   "city": "待确认"
+ },
+ {
+  "name": "KD-8ik 成员号",
+  "status": "members_renamed",
+  "type": "成员组",
+  "city": "云南",
+  "note": "6个历史昵称均已改名，现名不带团名后缀，需从官号近期转发二次追踪"
+ },
+ {
+  "name": "HelluTa地狱之歌 成员号",
+  "status": "not_found",
+  "type": "成员组",
+  "city": "重庆",
+  "note": "成员昵称不带团名，需从官号转发流追踪"
+ },
+ {
+  "name": "WiSugar 咂咂Zaki/寒寒Ruri",
+  "status": "renamed",
+  "type": "成员",
+  "city": "北京",
+  "note": "已改名，四糖限定应有4人，现缺2人"
  }
 ]
