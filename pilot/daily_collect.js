@@ -34,21 +34,26 @@ const clean = s => (s || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 (async () => {
-  const today = new Date().toISOString().slice(0, 10);
+  // 本地日期（不能用 toISOString 的 UTC，否则清晨采集会记成前一天）
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const statePath = path.join(DATA, 'state.json');
   const state = fs.existsSync(statePath) ? JSON.parse(fs.readFileSync(statePath, 'utf8')) : {};
   const network = loadNetwork();
 
-  const browser = await chromium.launch({
+  // 持久化浏览器档案：cookie/访客身份跨次运行保留。
+  // 每次新建上下文=新访客，同一IP一天冒出几百个新访客是最强的机器人信号；
+  // 固定档案让访客身份随时间累积可信度，像真人一样"住"在这台机器上。
+  const profileDir = path.join(ROOT, 'browser_profile');
+  const ctx = await chromium.launchPersistentContext(profileDir, {
     executablePath: findChromium(), headless: false,
     args: ['--disable-blink-features=AutomationControlled', '--no-sandbox', '--window-position=-3000,0'],
-  });
-  try { require('child_process').execSync('osascript -e \'tell application "Chromium" to set visible to false\' 2>/dev/null', { timeout: 2000 }); } catch (e) {}
-  const ctx = await browser.newContext({
     userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
     locale: 'zh-CN', viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true,
   });
-  const page = await ctx.newPage();
+  const browser = ctx; // close 时关的是持久上下文
+  try { require('child_process').execSync('osascript -e \'tell application "Chromium" to set visible to false\' 2>/dev/null', { timeout: 2000 }); } catch (e) {}
+  const page = ctx.pages()[0] || await ctx.newPage();
 
   // 截获页面自身的 getIndex 响应：handler 只同步把 response 引用推入数组
   // （在 handler 内 await r.json() 会与页面消费 body 争用而挂起 —— 改到主流程解析）。
