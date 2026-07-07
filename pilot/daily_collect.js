@@ -51,16 +51,14 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await ctx.addInitScript(() => { Object.defineProperty(navigator, 'webdriver', { get: () => undefined }); });
   const page = await ctx.newPage();
 
-  // 截获页面自身的 getIndex 响应
-  let bucket = { profile: null, feed: null };
-  page.on('response', async r => {
+  // 截获页面自身的 getIndex 响应：handler 只同步存 response 引用（在 handler 内
+  // await r.json() 会与页面消费 body 争用而挂起 —— 改到主流程解析）。保留首个响应。
+  let bucket = { profileResp: null, feedResp: null };
+  page.on('response', r => {
     const url = r.url();
     if (!url.includes('/api/container/getIndex')) return;
-    try {
-      const j = await r.json();
-      if (url.includes('containerid=100505')) bucket.profile = j;
-      else if (url.includes('containerid=107603')) bucket.feed = j;
-    } catch (e) {}
+    if (url.includes('containerid=100505') && !bucket.profileResp) bucket.profileResp = r;
+    else if (url.includes('containerid=107603') && !bucket.feedResp) bucket.feedResp = r;
   });
 
   const out = { date: today, accounts: [], errors: [], snapshots: 0 };
