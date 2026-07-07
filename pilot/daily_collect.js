@@ -117,7 +117,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       out.errors.push({ uid: acc.uid, name: acc.name, error: String(e).slice(0, 100) });
     }
     done++;
-    process.stderr.write(`[${done}/${network.length}] ${acc.name}${bucket.feed && bucket.feed.ok === 1 ? '' : ' ⚠️'}\n`);
+    process.stderr.write(`[${done}/${network.length}] ${acc.name}\n`);
     await sleep(2000 + Math.random() * 2000);
   }
 
