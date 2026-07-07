@@ -69,6 +69,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     try {
       await page.goto(`https://m.weibo.cn/u/${acc.uid}`, { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {});
       await sleep(6000); // 固定等待页面自身完成 profile+feed 请求（dump 验证可靠）
+      process.stderr.write(`DBG ${acc.uid} url=${page.url().slice(20,45)} bucket=${respBucket.length}\n`);
       // 事后解析：从收集到的响应里挑首个 feed 与 profile
       let feed = null, profile = null;
       for (const r of respBucket) {
