@@ -1,0 +1,44 @@
+[
+ {
+  "name": "地下偶像相关BOT",
+  "status": "no_exact_match",
+  "type": "资讯",
+  "city": "全国"
+ },
+ {
+  "name": "MagicalStage_",
+  "status": "not_found",
+  "type": "主办",
+  "city": "重庆"
+ },
+ {
+  "name": "DreamLive_Festival",
+  "status": "not_found",
+  "type": "主办",
+  "city": "郑州"
+ },
+ {
+  "name": "上海-杭州偶像团体新人招募",
+  "status": "not_found",
+  "type": "招募中介",
+  "city": "沪杭"
+ },
+ {
+  "name": "地偶男团VLOOKUP_official",
+  "status": "not_found",
+  "type": "团体",
+  "city": "上海"
+ },
+ {
+  "name": "Lumos荧光计划",
+  "status": "no_exact_match",
+  "type": "团体+主办",
+  "city": "北京"
+ },
+ {
+  "name": "MatriX-Official",
+  "status": "no_exact_match",
+  "type": "团体",
+  "city": "待确认"
+ }
+]
