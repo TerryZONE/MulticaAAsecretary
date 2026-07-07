@@ -1,8 +1,8 @@
-// 每日增量采集器：读 network.csv 分层轮询全网络，断点增量取新帖，分频记粉丝快照。
+// 每日增量采集器 v2：逐个打开博主主页，截获页面自身的 getIndex XHR（不伪造请求）。
+// 一次导航同时获得 profile（粉丝快照）与 feed（新帖），完全复用真实页面行为。
 // 用法: NODE_PATH=... node daily_collect.js
-// 输出: data/daily_YYYY-MM-DD.json（新帖按账号分组）；state.json 记断点；快照追加 snapshots.csv
-// 分频策略: 帖子=全员每日一页；快照=priority≤1 每日，priority≥2 每周一。
-// 首次见到某账号时只取最新 3 条作基线，避免历史帖灌爆日报。
+// 输出: data/daily_YYYY-MM-DD.json；state.json 记断点；快照追加 snapshots.csv（全员每日）
+// 首次见到某账号只取最新 3 条作基线，避免历史帖灌爆日报。
 const { chromium } = require('playwright-core');
 const path = require('path');
 const os = require('os');
@@ -22,7 +22,6 @@ function loadNetwork() {
   const lines = fs.readFileSync(path.join(ROOT, 'network.csv'), 'utf8').trim().split('\n');
   const head = lines[0].split(',');
   return lines.slice(1).map(l => {
-    // 简易 CSV 解析（本文件无引号字段）
     const v = l.split(',');
     const o = {};
     head.forEach((h, i) => (o[h] = v[i]));
@@ -36,7 +35,6 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 (async () => {
   const today = new Date().toISOString().slice(0, 10);
-  const isMonday = new Date().getDay() === 1;
   const statePath = path.join(DATA, 'state.json');
   const state = fs.existsSync(statePath) ? JSON.parse(fs.readFileSync(statePath, 'utf8')) : {};
   const network = loadNetwork();
@@ -52,66 +50,75 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   });
   await ctx.addInitScript(() => { Object.defineProperty(navigator, 'webdriver', { get: () => undefined }); });
   const page = await ctx.newPage();
-  const apiGet = url => page.evaluate(async u => {
-    const r = await fetch(u, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-    return await r.json();
-  }, url);
 
-  await page.goto('https://m.weibo.cn/', { waitUntil: 'domcontentloaded', timeout: 30000 });
-  await sleep(4000);
+  // 截获页面自身的 getIndex 响应
+  let bucket = { profile: null, feed: null };
+  page.on('response', async r => {
+    const url = r.url();
+    if (!url.includes('/api/container/getIndex')) return;
+    try {
+      const j = await r.json();
+      if (url.includes('containerid=100505')) bucket.profile = j;
+      else if (url.includes('containerid=107603')) bucket.feed = j;
+    } catch (e) {}
+  });
 
   const out = { date: today, accounts: [], errors: [], snapshots: 0 };
   const snapLines = [];
+  let done = 0;
 
   for (const acc of network) {
     const st = state[acc.uid] || {};
     const firstRun = !st.last_post_id;
+    bucket = { profile: null, feed: null };
     try {
-      const feed = await apiGet(`https://m.weibo.cn/api/container/getIndex?type=uid&value=${acc.uid}&containerid=107603${acc.uid}`);
-      const cards = ((feed && feed.data && feed.data.cards) || []).filter(c => c.card_type === 9 && c.mblog);
-      let posts = cards.map(c => {
-        const m = c.mblog;
-        return {
-          id: m.id,
-          is_top: !!(m.title && m.title.text && m.title.text.includes('置顶')),
-          date: m.created_at,
-          text: clean(m.text).slice(0, 300),
-          rt: m.retweeted_status ? { user: m.retweeted_status.user ? m.retweeted_status.user.screen_name : '?', text: clean(m.retweeted_status.text).slice(0, 200) } : null,
-          reposts: m.reposts_count, comments: m.comments_count, likes: m.attitudes_count, pics: (m.pics || []).length,
-          screen_name: m.user ? m.user.screen_name : acc.name,
-        };
-      });
-      const maxId = posts.reduce((mx, p) => (BigInt(p.id) > BigInt(mx || '0') ? p.id : mx), st.last_post_id || '0');
-      let fresh;
-      if (firstRun) {
-        fresh = posts.filter(p => !p.is_top).slice(0, 3).map(p => ({ ...p, baseline: true }));
-      } else {
-        fresh = posts.filter(p => !p.is_top && BigInt(p.id) > BigInt(st.last_post_id));
-      }
-      // 昵称变更检测（成员改名监测）
-      const curName = posts.length ? posts[0].screen_name : null;
-      const renamed = curName && curName !== acc.name ? { from: acc.name, to: curName } : null;
-      if (fresh.length || renamed) {
-        out.accounts.push({ uid: acc.uid, name: curName || acc.name, type: acc.type, city: acc.city, priority: acc.priority, renamed, new_posts: fresh, first_run: firstRun });
-      }
-      state[acc.uid] = { ...st, last_post_id: maxId === '0' ? st.last_post_id : maxId, last_seen: today, name: curName || acc.name };
+      await page.goto(`https://m.weibo.cn/u/${acc.uid}`, { waitUntil: 'domcontentloaded', timeout: 25000 });
+      // 等页面自身把 feed 拉回来（最多 12 秒）
+      for (let w = 0; w < 24 && !bucket.feed; w++) await sleep(500);
+      await sleep(800);
 
-      // 快照分频
-      if (acc.priority <= 1 || isMonday) {
-        await sleep(2000);
-        const info = await apiGet(`https://m.weibo.cn/api/container/getIndex?type=uid&value=${acc.uid}`);
-        const ui = info && info.data && info.data.userInfo;
-        if (ui) {
-          const est = String(ui.followers_count).includes('万') ? Math.round(parseFloat(ui.followers_count) * 10000) : parseInt(ui.followers_count) || '';
-          snapLines.push(`${today},${acc.uid},${ui.screen_name},${ui.followers_count},${est},,${ui.statuses_count || ''}`);
-          out.snapshots++;
+      // 快照（全员每日，来自页面自身的 profile 响应）
+      const ui = bucket.profile && bucket.profile.data && bucket.profile.data.userInfo;
+      if (ui) {
+        const est = String(ui.followers_count).includes('万') ? Math.round(parseFloat(ui.followers_count) * 10000) : parseInt(ui.followers_count) || '';
+        snapLines.push(`${today},${acc.uid},${ui.screen_name},${ui.followers_count},${est},,${ui.statuses_count || ''}`);
+        out.snapshots++;
+      }
+
+      const feedOk = bucket.feed && bucket.feed.ok === 1;
+      if (!feedOk) {
+        out.errors.push({ uid: acc.uid, name: acc.name, error: 'feed_missing ok=' + (bucket.feed ? bucket.feed.ok : 'none') });
+      } else {
+        const cards = (bucket.feed.data.cards || []).filter(c => c.card_type === 9 && c.mblog);
+        const posts = cards.map(c => {
+          const m = c.mblog;
+          return {
+            id: m.id,
+            is_top: !!(m.title && m.title.text && m.title.text.includes('置顶')),
+            date: m.created_at,
+            text: clean(m.text).slice(0, 300),
+            rt: m.retweeted_status ? { user: m.retweeted_status.user ? m.retweeted_status.user.screen_name : '?', text: clean(m.retweeted_status.text).slice(0, 200) } : null,
+            reposts: m.reposts_count, comments: m.comments_count, likes: m.attitudes_count, pics: (m.pics || []).length,
+            screen_name: m.user ? m.user.screen_name : acc.name,
+          };
+        });
+        const maxId = posts.reduce((mx, p) => (BigInt(p.id) > BigInt(mx || '0') ? p.id : mx), st.last_post_id || '0');
+        const fresh = firstRun
+          ? posts.filter(p => !p.is_top).slice(0, 3).map(p => ({ ...p, baseline: true }))
+          : posts.filter(p => !p.is_top && BigInt(p.id) > BigInt(st.last_post_id));
+        const curName = (ui && ui.screen_name) || (posts.length ? posts[0].screen_name : null);
+        const renamed = curName && curName !== acc.name ? { from: acc.name, to: curName } : null;
+        if (fresh.length || renamed) {
+          out.accounts.push({ uid: acc.uid, name: curName || acc.name, type: acc.type, city: acc.city, priority: acc.priority, renamed, new_posts: fresh, first_run: firstRun });
         }
+        state[acc.uid] = { ...st, last_post_id: maxId === '0' ? st.last_post_id : maxId, last_seen: today, name: curName || acc.name };
       }
     } catch (e) {
       out.errors.push({ uid: acc.uid, name: acc.name, error: String(e).slice(0, 100) });
     }
-    process.stderr.write(`[${network.indexOf(acc) + 1}/${network.length}] ${acc.name}\n`);
-    await sleep(2500 + Math.random() * 1500);
+    done++;
+    process.stderr.write(`[${done}/${network.length}] ${acc.name}${bucket.feed && bucket.feed.ok === 1 ? '' : ' ⚠️'}\n`);
+    await sleep(2000 + Math.random() * 2000);
   }
 
   await browser.close();
