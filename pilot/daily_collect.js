@@ -108,6 +108,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
             rt: m.retweeted_status ? { user: m.retweeted_status.user ? m.retweeted_status.user.screen_name : '?', text: clean(m.retweeted_status.text).slice(0, 200) } : null,
             reposts: m.reposts_count, comments: m.comments_count, likes: m.attitudes_count, pics: (m.pics || []).length,
             screen_name: m.user ? m.user.screen_name : acc.name,
+            raw: m, // 完整 mblog 对象，入库存档用（采集求全，加工靠后）
           };
         });
         const maxId = posts.reduce((mx, p) => (BigInt(p.id) > BigInt(mx || '0') ? p.id : mx), st.last_post_id || '0');
