@@ -85,11 +85,11 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
         out.snapshots++;
       }
 
-      const feedOk = bucket.feed && bucket.feed.ok === 1;
+      const feedOk = feed && feed.ok === 1;
       if (!feedOk) {
-        out.errors.push({ uid: acc.uid, name: acc.name, error: 'feed_missing ok=' + (bucket.feed ? bucket.feed.ok : 'none') });
+        out.errors.push({ uid: acc.uid, name: acc.name, error: 'feed_missing ok=' + (feed ? feed.ok : 'none') });
       } else {
-        const cards = (bucket.feed.data.cards || []).filter(c => c.card_type === 9 && c.mblog);
+        const cards = (feed.data.cards || []).filter(c => c.card_type === 9 && c.mblog);
         const posts = cards.map(c => {
           const m = c.mblog;
           return {
