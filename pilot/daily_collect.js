@@ -72,10 +72,10 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     const firstRun = !st.last_post_id;
     bucket = { profile: null, feed: null };
     try {
-      await page.goto(`https://m.weibo.cn/u/${acc.uid}`, { waitUntil: 'domcontentloaded', timeout: 25000 });
-      // 等页面自身把 feed 拉回来（最多 12 秒）
-      for (let w = 0; w < 24 && !bucket.feed; w++) await sleep(500);
-      await sleep(800);
+      await page.goto(`https://m.weibo.cn/u/${acc.uid}`, { waitUntil: 'networkidle', timeout: 30000 }).catch(() => {});
+      // 兜底：networkidle 已基本保证 feed 到位，再轮询等待最多 8 秒
+      for (let w = 0; w < 16 && !bucket.feed; w++) await sleep(500);
+      await sleep(500);
 
       // 快照（全员每日，来自页面自身的 profile 响应）
       const ui = bucket.profile && bucket.profile.data && bucket.profile.data.userInfo;
