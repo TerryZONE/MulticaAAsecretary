@@ -65,14 +65,19 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   for (const acc of network) {
     const st = state[acc.uid] || {};
     const firstRun = !st.last_post_id;
-    bucket = { profileResp: null, feedResp: null };
+    respBucket = [];
     try {
       await page.goto(`https://m.weibo.cn/u/${acc.uid}`, { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {});
-      // 等页面自身发出 feed 请求（最多 10 秒）
-      for (let w = 0; w < 20 && !bucket.feedResp; w++) await sleep(500);
-      await sleep(600);
-      const feed = bucket.feedResp ? await bucket.feedResp.json().catch(() => null) : null;
-      const profile = bucket.profileResp ? await bucket.profileResp.json().catch(() => null) : null;
+      await sleep(6000); // 固定等待页面自身完成 profile+feed 请求（dump 验证可靠）
+      // 事后解析：从收集到的响应里挑首个 feed 与 profile
+      let feed = null, profile = null;
+      for (const r of respBucket) {
+        const u = r.url();
+        const j = await r.json().catch(() => null);
+        if (!j) continue;
+        if (!feed && u.includes('containerid=107603')) feed = j;
+        else if (!profile && u.includes('containerid=100505')) profile = j;
+      }
 
       // 快照（全员每日，来自页面自身的 profile 响应）
       const ui = profile && profile.data && profile.data.userInfo;
