@@ -48,17 +48,14 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
     locale: 'zh-CN', viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true,
   });
-  await ctx.addInitScript(() => { Object.defineProperty(navigator, 'webdriver', { get: () => undefined }); });
   const page = await ctx.newPage();
 
-  // 截获页面自身的 getIndex 响应：handler 只同步存 response 引用（在 handler 内
-  // await r.json() 会与页面消费 body 争用而挂起 —— 改到主流程解析）。保留首个响应。
-  let bucket = { profileResp: null, feedResp: null };
+  // 截获页面自身的 getIndex 响应：handler 只同步把 response 引用推入数组
+  // （在 handler 内 await r.json() 会与页面消费 body 争用而挂起 —— 改到主流程解析）。
+  let respBucket = [];
   page.on('response', r => {
     const url = r.url();
-    if (!url.includes('/api/container/getIndex')) return;
-    if (url.includes('containerid=100505') && !bucket.profileResp) bucket.profileResp = r;
-    else if (url.includes('containerid=107603') && !bucket.feedResp) bucket.feedResp = r;
+    if (url.includes('/api/container/getIndex') && (url.includes('containerid=100505') || url.includes('containerid=107603'))) respBucket.push(r);
   });
 
   const out = { date: today, accounts: [], errors: [], snapshots: 0 };
