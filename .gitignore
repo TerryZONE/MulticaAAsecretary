@@ -23,3 +23,6 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# 档案库与每日采集数据不进 git（体积随天数膨胀），备份策略另行规划
+pilot/data/
