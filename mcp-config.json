@@ -2,11 +2,16 @@
   "mcpServers": {
     "weibo-idol": {
       "command": "python3",
-      "args": ["/Users/qingtingcheng/Documents/Claude/MulticaAAsecretary/start_mcp.py"]
+      "args": [
+        "/Users/qingtingcheng/Documents/Claude/company/MulticaAAsecretary/start_mcp.py"
+      ]
     },
     "sqlite": {
       "command": "/Library/Frameworks/Python.framework/Versions/3.13/bin/mcp-server-sqlite",
-      "args": ["--db-path", "/Users/qingtingcheng/Documents/Claude/MulticaAAsecretary/mcp-server/data/idol_monitor.db"]
+      "args": [
+        "--db-path",
+        "/Users/qingtingcheng/Documents/Claude/company/MulticaAAsecretary/pilot/data/archive.db"
+      ]
     }
   }
 }
